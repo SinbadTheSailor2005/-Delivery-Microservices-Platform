@@ -1,4 +1,4 @@
-package dev.vundirov.orderservice.domain;
+package dev.vundirov.common.dto;
 
 public enum PaymentStatus {
   PENDING,
