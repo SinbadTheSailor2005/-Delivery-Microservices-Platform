@@ -5,6 +5,11 @@ spring:
     username: postgres
     url: jdbc:postgresql://localhost:5433/warehouse
 
+logging:
+  level:
+    root: INFO
+    org.apache.kafka: WARN
+    org.springframework.kafka: WARN
 
 server:
   port: 8083
