@@ -2,8 +2,7 @@ package dev.vundirov.orderservice.domain.api;
 
 
 import dev.vundirov.orderservice.domain.api.dto.PostOrderDto;
-import dev.vundirov.orderservice.domain.dto.OrderDto;
-import dev.vundirov.orderservice.domain.entities.Order;
+import dev.vundirov.common.dto.OrderDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;

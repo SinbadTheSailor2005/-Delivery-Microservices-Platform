@@ -1,6 +1,6 @@
 package dev.vundirov.orderservice.domain.entities;
 
-import dev.vundirov.orderservice.domain.PaymentStatus;
+import dev.vundirov.common.dto.PaymentStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
