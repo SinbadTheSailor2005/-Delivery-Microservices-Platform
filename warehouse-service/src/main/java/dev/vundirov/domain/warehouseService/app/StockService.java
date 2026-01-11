@@ -1,5 +1,6 @@
 package dev.vundirov.domain.warehouseService.app;
 
+import dev.vundirov.common.dto.OrderItemDto;
 import dev.vundirov.common.dto.kafka.OrderCreatedEvent;
 import dev.vundirov.domain.warehouseService.entities.IdempotencyKey;
 import dev.vundirov.domain.warehouseService.repositories.IdempotencyKeyRepository;
@@ -10,6 +11,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 
 @Service
@@ -23,14 +26,17 @@ public class StockService {
   private final ProductRepository productRepository;
 
   @Transactional
-  public void processStockReservation(OrderCreatedEvent event) {
+  public boolean processStockReservation(OrderCreatedEvent event) {
     if (idempotencyKeyRepository.existsById(event.messageId())) {
       logger.info("Event {} already processed. Skipping.", event.messageId());
-      return;
+      return false;
     }
-
     idempotencyKeyRepository.save(new IdempotencyKey(event.messageId()));
+    reserveItems(event);
+    return true;
+  }
 
+  private void reserveItems(OrderCreatedEvent event) {
     for (var item : event.orderItems()) {
 
       int rowsUpdated =
@@ -42,6 +48,14 @@ public class StockService {
         throw new OutOfStockException(
                 "Not enough stock for product ID: " + item.id());
       }
+    }
+  }
+
+  @Transactional
+  public void reverseReservation(
+          List<OrderItemDto> items) {
+    for (var item : items) {
+      productRepository.reverseStockReservation(item.id(), item.quantity());
     }
   }
 }

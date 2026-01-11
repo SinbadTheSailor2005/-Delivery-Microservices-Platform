@@ -3,6 +3,7 @@ package dev.vundirov.orderservice.domain.api;
 import dev.vundirov.app.KafkaConfiguration;
 import dev.vundirov.common.dto.PaymentStatus;
 import dev.vundirov.common.dto.kafka.OrderCreatedEvent;
+import dev.vundirov.common.dto.kafka.PaymentProcessedEvent;
 import dev.vundirov.common.dto.kafka.StockProcessedEvent;
 import dev.vundirov.orderservice.domain.api.dto.PostOrderDto;
 import dev.vundirov.common.dto.OrderDto;
@@ -59,6 +60,36 @@ private static final Logger logger = LoggerFactory.getLogger(OrderService.class)
 
 
   @KafkaListener(
+          topics = KafkaConfiguration.PAYMENT_PROCESS_TOPIC,
+          groupId = "order-service-group",
+          containerFactory = "objectListenerFactory"
+  )
+  @Transactional
+  public void examinePaymentEvent(PaymentProcessedEvent event) {
+    logger.info("Received payment processed event {}",event );
+    if (!event.paymentSuccessful()) {
+        logger.warn("Payment failed for order {}: {}", event.orderId(),
+                event.comment());
+      setFailedPaymentStatus(event.orderId());
+
+    } else {
+      logger.info("Payment succeeded for order {}. Do nothing...",
+              event);
+      setSuccessfulPaymentStatus(event.orderId());
+    }
+  }
+
+  private void setSuccessfulPaymentStatus(int id) {
+    Order order = orderRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Entity with id `%s` not found".formatted(id)
+            ));
+    order.setPaymentStatus(PaymentStatus.COMPLETED);
+    orderRepository.save(order);
+  }
+
+  @KafkaListener(
             topics = KafkaConfiguration.STOCK_PROCESSED_TOPIC,
             groupId = "order-service-group",
             containerFactory = "objectListenerFactory"
@@ -69,7 +100,7 @@ private static final Logger logger = LoggerFactory.getLogger(OrderService.class)
     if (!event.stockAvailable()) {
         logger.warn("Stock reservation failed for order {}: {}", event.orderId(),
                 event.comment());
-      setFailedPaymentStatus(event);
+      setFailedPaymentStatus(event.orderId());
 
     } else {
       logger.info("Stock reservation succeeded for order {}. Do nothing...",
@@ -77,11 +108,11 @@ private static final Logger logger = LoggerFactory.getLogger(OrderService.class)
     }
   }
 
-  private void setFailedPaymentStatus(StockProcessedEvent event) {
-    Order order = orderRepository.findById(event.orderId())
+  private void setFailedPaymentStatus(int id) {
+    Order order = orderRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(
                     HttpStatus.NOT_FOUND,
-                    "Entity with id `%s` not found".formatted(event.orderId())
+                    "Entity with id `%s` not found".formatted(id)
             ));
     order.setPaymentStatus(PaymentStatus.FAILED);
     orderRepository.save(order);
