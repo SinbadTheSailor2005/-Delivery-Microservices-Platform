@@ -32,6 +32,7 @@ public class PaymentService {
               "Payment cannot be processed for order {}: stock not available. Comment: {}",
               event.orderId(), event.comment()
       );
+      return;
     }
     try {
       boolean isPayedSuccessfully = paymentProceeder.proceedPayment(event);
@@ -58,7 +59,7 @@ public class PaymentService {
           String message) {
     PaymentProcessedEvent paymentProcessedEvent = new PaymentProcessedEvent(
             event.orderId(),
-            message,
+            event.orderId().toString(),
             result,
             message,
             event.items()

@@ -18,7 +18,7 @@ public class WarehouseService {
   private static final Logger logger =
           LoggerFactory.getLogger(WarehouseService.class);
 
-  private StockService stockService;
+  private ReserveItemsService reserveItemsService;
   private KafkaTemplate<String, Object> kafkaTemplate;
 
 
@@ -33,7 +33,7 @@ public class WarehouseService {
     logger.info("Received OrderCreatedEvent: {}", event);
     try {
       boolean reservedSuccessfully =
-              stockService.processStockReservation(event);
+              reserveItemsService.processStockReservation(event);
       if (reservedSuccessfully) {
         logger.info(
                 "Stock reservation succeed for event: {}", event.messageId());
@@ -60,7 +60,7 @@ public class WarehouseService {
     };
     logger.info("Reversing stock reservation for order {} due to payment failure.",
             event.orderId());
-    stockService.reverseReservation(event.items());
+    reserveItemsService.reverseReservation(event.items());
     logger.info("Stock reservation reversed for order {}.", event.orderId());
 
   }

@@ -6,7 +6,6 @@ import dev.vundirov.domain.warehouseService.entities.IdempotencyKey;
 import dev.vundirov.domain.warehouseService.repositories.IdempotencyKeyRepository;
 import dev.vundirov.domain.warehouseService.repositories.ProductRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -17,9 +16,9 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class StockService {
+public class ReserveItemsService {
   private static final Logger logger =
-          LoggerFactory.getLogger(StockService.class);
+          LoggerFactory.getLogger(ReserveItemsService.class);
 
 
   private final IdempotencyKeyRepository idempotencyKeyRepository;
