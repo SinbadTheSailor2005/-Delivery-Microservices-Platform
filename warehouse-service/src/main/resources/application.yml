@@ -4,7 +4,9 @@ spring:
     password: postgres
     username: postgres
     url: jdbc:postgresql://localhost:5433/warehouse
-
+  jpa:
+    hibernate:
+      ddl-auto: create
 logging:
   level:
     root: INFO

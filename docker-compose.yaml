@@ -1,55 +1,58 @@
 services:
-  postgres-3:
+  postgres-payment:
     image: postgres:latest
-    restart: "no"
+    restart: unless-stopped
     ports:
       - "5434:5432"
     volumes:
-      - postgres-3_data:/var/lib/postgresql
+      - postgres-payment_data:/var/lib/postgresql/data
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: payment
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${DB_NAME_PAYMENT}
     healthcheck:
       test: pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB
       interval: 10s
       timeout: 5s
       start_period: 10s
       retries: 5
-  postgres:
+
+  postgres-order:
     image: postgres:16
     restart: unless-stopped
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres-order_data:/var/lib/postgresql/data
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: orders
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${DB_NAME_ORDER}
     healthcheck:
       test: pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB
       interval: 10s
       timeout: 5s
       start_period: 10s
       retries: 5
-  postgres-2:
+
+  postgres-warehouse:
     image: postgres:latest
     restart: unless-stopped
     ports:
       - "5433:5432"
     volumes:
-      - postgres-2_data:/var/lib/postgresql
+      - postgres-warehouse_data:/var/lib/postgresql/data
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: warehouse
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${DB_NAME_WAREHOUSE}
     healthcheck:
       test: pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB
       interval: 10s
       timeout: 5s
       start_period: 10s
       retries: 5
+
   kafka:
     image: confluentinc/cp-kafka:7.4.4
     restart: unless-stopped
@@ -77,8 +80,97 @@ services:
       retries: 5
     labels:
       amplicode.image: confluent/kafka
+
+  order-platform.order-service:
+    image: order-platform.order-service:latest
+    build:
+      context: .
+      dockerfile: order-service/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${PORT_ORDER}:8080"
+
+    environment:
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-order:5432/${DB_NAME_ORDER}
+      - SPRING_KAFKA_BOOTSTRAP-SERVERS=kafka:29092
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8080/ || exit 1
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+    depends_on:
+      postgres-order:
+          condition: service_healthy
+      kafka:
+        condition: service_healthy
+    labels:
+      amplicode.image: springboot
+
+  order-platform.payment-service:
+    image: order-platform.payment-service:latest
+    build:
+      context: .
+      dockerfile: payment-service/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${PORT_PAYMENT}:8081"
+    environment:
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-payment:5432/${DB_NAME_PAYMENT}
+      - SPRING_KAFKA_BOOTSTRAP-SERVERS=kafka:29092
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8081/ || exit 1
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+    depends_on:
+      postgres-payment:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    labels:
+      amplicode.image: springboot
+
+  order-platform.warehouse-service:
+    image: order-platform.warehouse-service:latest
+    build:
+      context: .
+      dockerfile: warehouse-service/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${PORT_WAREHOUSE}:8083"
+
+    environment:
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-warehouse:5432/${DB_NAME_WAREHOUSE}
+      - SPRING_KAFKA_BOOTSTRAP-SERVERS=kafka:29092
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8083/ || exit 1
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+    depends_on:
+        postgres-warehouse:
+          condition: service_healthy
+        kafka:
+          condition: service_healthy
+    labels:
+      amplicode.image: springboot
+
+
+
+
+
+
 volumes:
-  postgres_data:
+  postgres-order_data:
   kafka_data:
-  postgres-2_data:
-  postgres-3_data:
+  postgres-warehouse_data:
+  postgres-payment_data:
