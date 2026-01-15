@@ -20,29 +20,32 @@ pipeline {
                }
            }
        }
-stage('Run Tests') {
-    // В декларативном пайплайне parallel ставится ВМЕСТО steps, а не ВНУТРИ steps
-    parallel {
-        stage('Order Service') {
+        stage('Start Infrastructure') {
             steps {
-                echo "Testing Order Service..."
-                sh "docker compose -f ${COMPOSE_FILE} run --rm order-platform.order-service ./gradlew test"
+                echo "Starting Databases and Kafka..."
+                sh "docker compose -f ${COMPOSE_FILE} up -d --wait postgres-order postgres-payment postgres-warehouse kafka"
             }
         }
-        stage('Payment Service') {
-            steps {
-                echo "Testing Payment Service..."
-                sh "docker compose -f ${COMPOSE_FILE} run --rm order-platform.payment-service ./gradlew test"
+
+        stage('Run Tests') {
+            parallel {
+                stage('Order Service') {
+                    steps {
+                        sh "docker compose -f ${COMPOSE_FILE} run --rm --build --no-deps order-platform.order-service ./gradlew test"
+                    }
+                }
+                stage('Payment Service') {
+                    steps {
+                        sh "docker compose -f ${COMPOSE_FILE} run --rm --build --no-deps order-platform.payment-service ./gradlew test"
+                    }
+                }
+                stage('Warehouse Service') {
+                    steps {
+                        sh "docker compose -f ${COMPOSE_FILE} run --rm --build --no-deps order-platform.warehouse-service ./gradlew test"
+                    }
+                }
             }
         }
-        stage('Warehouse Service') {
-            steps {
-                echo "Testing Warehouse Service..."
-                sh "docker compose -f ${COMPOSE_FILE} run --rm order-platform.warehouse-service ./gradlew test"
-            }
-        }
-    }
-}
         stage('Stop Old Containers') {
             steps {
                 sh "docker compose -f ${COMPOSE_FILE} down || true"
