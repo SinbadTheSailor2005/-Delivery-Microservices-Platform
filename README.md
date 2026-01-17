@@ -65,9 +65,8 @@ docker compose --env-file .env up -d --build
 ## 🔄 CI/CD Pipeline (Jenkins)
 
 The included `Jenkinsfile` defines a robust multi-stage pipeline to ensure code quality and automated delivery:
+<img width="3802" height="1184" alt="image" src="https://github.com/user-attachments/assets/ea6b8607-dc38-45e2-870f-5c923e20a1d7" />
 
-* **Checkout:** Automatically pulls the latest source code from the repository.
-* **Test:** Executes the full integration test suite (leveraging **Testcontainers**) to verify microservice interactions.
 * **Build:** Compiles the Java source code and packages each service into optimized Docker images.
 * **Deploy:** Automatically updates the local environment by restarting services with the newly built images via Docker Compose.
 
