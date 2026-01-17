@@ -1,60 +1,65 @@
 pipeline {
-    agent any
+    agent any
 
-    environment {
-        COMPOSE_FILE = 'docker-compose.yaml'
-    }
+    environment {
+        COMPOSE_FILE = 'docker-compose.yaml'
+    }
 
-    stages {
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
 
-       stage('Prepare Environment') {
-           steps {
-               withCredentials([file(credentialsId: 'my-app-env', variable: 'ENV_FILE')]) {
+        stage('Prepare Environment') {
+            steps {
 
-                   sh 'cp \$ENV_FILE .env'
-               }
-           }
-       }
-       stage('Test') {
-           agent {
-               docker {
-                   image 'gradle:8.5-jdk21'
-               }
-           }
-           steps {
-               sh 'gradle test' 
-           }
-       }
-        stage('Stop Old Containers') {
-            steps {
-                sh "docker compose -f ${COMPOSE_FILE} down || true"
-            }
-        }
+                withCredentials([file(credentialsId: 'my-app-env', variable: 'ENV_FILE')]) {
+                    sh 'cp $ENV_FILE .env'
+                }
+            }
+        }
 
-        stage('Build & Deploy') {
-            steps { 
-                sh "docker compose -f ${COMPOSE_FILE} up -d --build"
-            }
-        }
+        stage('Test') {
+            agent {
 
-        stage('Cleanup') {
-            steps { 
-                sh "docker image prune -f"
-            }
-        }
-    }
-    
-    post {
-        failure {
-            echo "Build Failed."
-        }
-        success {
-            echo "Build Success"
-        }
-    }
+                docker { 
+                    image 'gradle:8.5-jdk21' 
+
+                    args '-u root' 
+                }
+            }
+            steps {
+                sh 'gradle test' 
+            }
+        }
+
+        stage('Stop Old Containers') {
+            steps {
+                sh "docker compose -f ${COMPOSE_FILE} down || true"
+            }
+        }
+
+        stage('Build & Deploy') {
+            steps { 
+                sh "docker compose -f ${COMPOSE_FILE} up -d --build"
+            }
+        }
+
+        stage('Cleanup') {
+            steps { 
+                sh "docker image prune -f"
+            }
+        }
+    }
+    
+    post {
+        failure {
+            echo "Build Failed."
+        }
+        success {
+            echo "Build Success"
+        }
+    }
 }
